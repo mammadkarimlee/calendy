@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Auto Service Nordkirchen</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body class="bg-slate-100 font-sans">
+    <div
+      class="max-w-xl mx-auto bg-white shadow-2xl min-h-screen border-x border-gray-200"
+    >
+      <div class="bg-slate-800 text-white p-2 flex justify-end gap-3 text-sm">
+        <button onclick="setLang('de')" class="hover:text-blue-300 font-bold">
+          🇩🇪 DE
+        </button>
+        <button onclick="setLang('tr')" class="hover:text-blue-300 font-bold">
+          🇹🇷 TR
+        </button>
+        <button onclick="setLang('en')" class="hover:text-blue-300 font-bold">
+          🇬🇧 EN
+        </button>
+        <button onclick="setLang('ru')" class="hover:text-blue-300 font-bold">
+          🇷🇺 RU
+        </button>
+      </div>
+
+      <div class="bg-blue-900 text-white p-6 text-center shadow-md">
+        <h1 class="text-2xl font-bold uppercase tracking-wider" id="txt_title">
+          🛠️ Mobiler Service
+        </h1>
+        <p class="text-blue-200 text-sm">Nordkirchen</p>
+      </div>
+
+      <div class="p-6">
+        <div class="mb-6 bg-slate-50 p-2 rounded-xl border border-blue-100">
+          <label
+            class="block text-sm font-bold text-gray-700 mb-2 pl-1"
+            id="txt_map_label"
+            >Dəqiq yeri seçin:</label
+          >
+
+          <div
+            id="map"
+            style="height: 400px; width: 100%; border-radius: 8px; z-index: 1"
+          ></div>
+
+          <p class="text-xs text-center text-gray-500 mt-2">
+            <i class="fas fa-arrows-alt"></i>
+            <span id="txt_map_hint"
+              >Pin-i sürüşdürərək qapınızın ağzına qoyun</span
+            >
+          </p>
+        </div>
+
+        <form id="bookingForm" class="space-y-4">
+          <div
+            class="p-4 bg-blue-50 rounded-xl border border-blue-200 text-center"
+          >
+            <button
+              type="button"
+              id="gpsBtn"
+              class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow hover:bg-blue-700 transition flex items-center justify-center gap-2"
+            >
+              <i class="fas fa-location-arrow"></i>
+              <span id="txt_gps_btn">Standort ermitteln</span>
+            </button>
+            <p id="txt_gps_sub" class="text-xs mt-2 text-gray-500">
+              və ya xəritədən əllə seçin
+            </p>
+
+            <textarea
+              id="address"
+              readonly
+              class="w-full mt-2 p-2 text-sm border rounded bg-white h-16 resize-none"
+              placeholder="..."
+            ></textarea>
+            <input type="hidden" id="googleMapsLink" />
+          </div>
+
+          <div>
+            <label class="font-bold text-gray-700 text-sm" id="lbl_name"
+              >Name</label
+            >
+            <input
+              type="text"
+              id="name"
+              required
+              class="w-full p-3 border rounded-lg bg-gray-50"
+            />
+          </div>
+
+          <div>
+            <label class="font-bold text-gray-700 text-sm" id="lbl_phone"
+              >Telefon</label
+            >
+            <input
+              type="tel"
+              id="phone"
+              required
+              class="w-full p-3 border rounded-lg bg-gray-50"
+            />
+          </div>
+
+          <div>
+            <label class="font-bold text-gray-700 text-sm" id="lbl_car"
+              >Fahrzeug Modell</label
+            >
+            <input
+              type="text"
+              id="car_model"
+              required
+              class="w-full p-3 border rounded-lg bg-gray-50"
+              placeholder="z.B. VW Golf 7"
+            />
+          </div>
+
+          <div>
+            <label class="font-bold text-gray-700 text-sm" id="lbl_service"
+              >Service</label
+            >
+            <select
+              id="service_type"
+              required
+              class="w-full p-3 border rounded-lg bg-white"
+            ></select>
+          </div>
+
+          <div class="flex gap-2">
+            <div class="w-1/2">
+              <label class="font-bold text-gray-700 text-sm" id="lbl_date"
+                >Datum</label
+              >
+              <input
+                type="date"
+                id="date"
+                required
+                class="w-full p-3 border rounded-lg"
+              />
+            </div>
+            <div class="w-1/2">
+              <label class="font-bold text-gray-700 text-sm" id="lbl_time"
+                >Uhrzeit</label
+              >
+              <select
+                id="time"
+                required
+                class="w-full p-3 border rounded-lg bg-white"
+              ></select>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="btn_submit"
+            class="w-full bg-green-600 text-white font-bold py-4 rounded-lg text-lg shadow-lg mt-4 hover:bg-green-700 transition"
+          >
+            Buchen
+          </button>
+        </form>
+
+        <div
+          id="messageBox"
+          class="hidden mt-4 p-4 text-center rounded font-bold"
+        ></div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+      // --- 1. DİL TƏRCÜMƏLƏRİ (DICTIONARY) ---
+      const translations = {
+        de: {
+          title: "🛠️ Mobiler Service",
+          map_label: "Genauer Standort:",
+          map_hint: "Verschieben Sie den Pin zu Ihrem Standort",
+          gps_btn: "Standort ermitteln",
+          gps_sub: "oder manuell auf der Karte wählen",
+          name: "Ihr Name",
+          phone: "Telefonnummer",
+          car: "Fahrzeugmodell (z.B. Golf 7)",
+          service: "Was soll gemacht werden?",
+          date: "Datum",
+          time: "Uhrzeit",
+          submit: "Jetzt Buchen",
+          msg_success: "Erfolgreich! Wir melden uns.",
+          msg_error: "Fehler! Bitte anrufen.",
+          gps_finding: "Suche...",
+          gps_found: "Gefunden!",
+          services: [
+            { val: "oel", text: "Ölwechsel (Yağ dəyişmə)" },
+            { val: "batterie", text: "Batteriewechsel (Batareya)" },
+            { val: "diagnose", text: "Fehlerdiagnose (Diaqnostika)" },
+            { val: "reifen", text: "Reifenwechsel (Təkər)" },
+            { val: "bremsen", text: "Bremsenservice (Əyləc)" },
+            { val: "inspektion", text: "Inspektion (Yoxlama)" },
+            { val: "andere", text: "Sonstiges (Digər)" },
+          ],
+        },
+        tr: {
+          title: "🛠️ Mobil Servis",
+          map_label: "Tam Konum:",
+          map_hint: "İğneyi (Pin) kapınızın önüne sürükleyin",
+          gps_btn: "Konumumu Bul",
+          gps_sub: "veya haritadan manuel seçin",
+          name: "Adınız Soyadınız",
+          phone: "Telefon Numarası",
+          car: "Araç Modeli (örn. Golf 7)",
+          service: "Hizmet Seçiniz",
+          date: "Tarih",
+          time: "Saat",
+          submit: "Randevu Al",
+          msg_success: "Başarılı! Sizinle iletişime geçeceğiz.",
+          msg_error: "Hata! Lütfen arayın.",
+          gps_finding: "Aranıyor...",
+          gps_found: "Bulundu!",
+          services: [
+            { val: "oel", text: "Yağ Değişimi" },
+            { val: "batterie", text: "Akü Değişimi" },
+            { val: "diagnose", text: "Arıza Tespiti (Diagnostik)" },
+            { val: "reifen", text: "Lastik Değişimi" },
+            { val: "bremsen", text: "Fren Servisi" },
+            { val: "inspektion", text: "Genel Muayene" },
+            { val: "andere", text: "Diğer" },
+          ],
+        },
+        en: {
+          title: "🛠️ Mobile Service",
+          map_label: "Exact Location:",
+          map_hint: "Drag the pin to your location",
+          gps_btn: "Find My Location",
+          gps_sub: "or select manually on map",
+          name: "Full Name",
+          phone: "Phone Number",
+          car: "Car Model (e.g. Golf 7)",
+          service: "Select Service",
+          date: "Date",
+          time: "Time",
+          submit: "Book Now",
+          msg_success: "Success! We will contact you.",
+          msg_error: "Error! Please call us.",
+          gps_finding: "Searching...",
+          gps_found: "Found!",
+          services: [
+            { val: "oel", text: "Oil Change" },
+            { val: "batterie", text: "Battery Replacement" },
+            { val: "diagnose", text: "Diagnostics" },
+            { val: "reifen", text: "Tire Change" },
+            { val: "bremsen", text: "Brake Service" },
+            { val: "inspektion", text: "Inspection" },
+            { val: "andere", text: "Other" },
+          ],
+        },
+        ru: {
+          title: "🛠️ Мобильный Сервис",
+          map_label: "Точное местоположение:",
+          map_hint: "Перетащите метку к вашему дому",
+          gps_btn: "Найти меня",
+          gps_sub: "или выберите на карте вручную",
+          name: "Ваше Имя",
+          phone: "Номер телефона",
+          car: "Модель авто (напр. Golf 7)",
+          service: "Выберите услугу",
+          date: "Дата",
+          time: "Время",
+          submit: "Заказать",
+          msg_success: "Успешно! Мы свяжемся с вами.",
+          msg_error: "Ошибка! Позвоните нам.",
+          gps_finding: "Поиск...",
+          gps_found: "Найдено!",
+          services: [
+            { val: "oel", text: "Замена масла" },
+            { val: "batterie", text: "Замена аккумулятора" },
+            { val: "diagnose", text: "Диагностика" },
+            { val: "reifen", text: "Замена шин" },
+            { val: "bremsen", text: "Тормоза" },
+            { val: "inspektion", text: "Осмотр" },
+            { val: "andere", text: "Другое" },
+          ],
+        },
+      };
+
+      let currentLang = "de"; // Default dil
+
+      // Dili Dəyişən Funksiya
+      function setLang(lang) {
+        currentLang = lang;
+        const t = translations[lang];
+
+        document.getElementById("txt_title").innerText = t.title;
+        document.getElementById("txt_map_label").innerText = t.map_label;
+        document.getElementById("txt_map_hint").innerText = t.map_hint;
+        document.getElementById("txt_gps_btn").innerText = t.gps_btn;
+        document.getElementById("txt_gps_sub").innerText = t.gps_sub;
+
+        document.getElementById("lbl_name").innerText = t.name;
+        document.getElementById("lbl_phone").innerText = t.phone;
+        document.getElementById("lbl_car").innerText = t.car;
+        document.getElementById("lbl_service").innerText = t.service;
+        document.getElementById("lbl_date").innerText = t.date;
+        document.getElementById("lbl_time").innerText = t.time;
+        document.getElementById("btn_submit").innerText = t.submit;
+
+        // Xidmətlər siyahısını (Dropdown) yenilə
+        const serviceSelect = document.getElementById("service_type");
+        serviceSelect.innerHTML = ""; // Təmizlə
+        t.services.forEach((s) => {
+          let opt = document.createElement("option");
+          opt.value = s.text; // Bazaya gedəcək mətn
+          opt.innerText = s.text;
+          serviceSelect.appendChild(opt);
+        });
+      }
+
+      window.onload = function () {
+        // İlk açılışda Alman dili olsun
+        setLang("de");
+
+        // --- XƏRİTƏ KODLARI (DƏYİŞMƏZ QALDI) ---
+        var lat = 51.7394;
+        var lng = 7.5236;
+
+        try {
+          var map = L.map("map").setView([lat, lng], 13);
+          L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+          }).addTo(map);
+          var marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+          setTimeout(function () {
+            map.invalidateSize();
+          }, 500);
+
+          marker.on("dragend", function (event) {
+            var pos = marker.getLatLng();
+            getAddress(pos.lat, pos.lng);
+          });
+          map.on("click", function (e) {
+            marker.setLatLng(e.latlng);
+            getAddress(e.latlng.lat, e.latlng.lng);
+          });
+
+          document.getElementById("gpsBtn").onclick = function () {
+            var status = document.getElementById("txt_gps_btn");
+            status.innerText = translations[currentLang].gps_finding;
+
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                  var gLat = pos.coords.latitude;
+                  var gLng = pos.coords.longitude;
+                  map.setView([gLat, gLng], 16);
+                  marker.setLatLng([gLat, gLng]);
+                  getAddress(gLat, gLng);
+                  status.innerText = translations[currentLang].gps_found;
+                },
+                function () {
+                  status.innerText = "GPS Error";
+                }
+              );
+            }
+          };
+
+          async function getAddress(lat, lng) {
+            var addrBox = document.getElementById("address");
+            var linkBox = document.getElementById("googleMapsLink");
+            linkBox.value =
+              "https://www.google.com/maps/search/?api=1\&query=51.7394,7.5236" +
+              lat +
+              "," +
+              lng;
+            addrBox.value = "...";
+            try {
+              var res = await fetch(
+                "https://nominatim.openstreetmap.org/reverse?format=json&lat=" +
+                  lat +
+                  "&lon=" +
+                  lng
+              );
+              var data = await res.json();
+              addrBox.value = data.display_name || lat + ", " + lng;
+            } catch (e) {
+              addrBox.value = lat.toFixed(5) + ", " + lng.toFixed(5);
+            }
+          }
+        } catch (err) {
+          console.log(err);
+        }
+
+        // --- SUPABASE VƏ FORM ---
+        const SUPABASE_URL = "SENIN_SUPABASE_URL";
+        const SUPABASE_KEY = "SENIN_ANON_KEY";
+
+        try {
+          const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+          var timeSelect = document.getElementById("time");
+          for (var i = 9; i <= 17; i++) {
+            var h = i < 10 ? "0" + i : i;
+            timeSelect.innerHTML += `<option value="${h}:00">${h}:00</option>`;
+          }
+          document.getElementById("date").min = new Date()
+            .toISOString()
+            .split("T")[0];
+
+          document.getElementById("bookingForm").onsubmit = async function (e) {
+            e.preventDefault();
+            var btn = document.getElementById("btn_submit");
+            var msg = document.getElementById("messageBox");
+
+            btn.disabled = true;
+            btn.innerText = "...";
+
+            // MAŞIN + XİDMƏTİ BİRLƏŞDİRİB BAZAYA YAZIRIQ
+            // Beləliklə bazada yeni sütun açmağa ehtiyac qalmır
+            var fullCarDetails =
+              document.getElementById("car_model").value +
+              " | Xidmət: " +
+              document.getElementById("service_type").value;
+
+            var { error } = await supabase.from("bookings").insert([
+              {
+                client_name: document.getElementById("name").value,
+                client_phone: document.getElementById("phone").value,
+                client_address:
+                  document.getElementById("address").value +
+                  "\n📍 MAP: " +
+                  document.getElementById("googleMapsLink").value,
+                car_details: fullCarDetails,
+                booking_date: document.getElementById("date").value,
+                booking_time: document.getElementById("time").value,
+              },
+            ]);
+
+            msg.classList.remove("hidden");
+            if (error) {
+              msg.className = "mt-4 p-4 bg-red-100 text-red-700 rounded";
+              msg.innerText = translations[currentLang].msg_error;
+            } else {
+              msg.className = "mt-4 p-4 bg-green-100 text-green-700 rounded";
+              msg.innerText = translations[currentLang].msg_success;
+              e.target.reset();
+              // Dili yenilə ki, xidmətlər geri gəlsin
+              setLang(currentLang);
+            }
+            btn.disabled = false;
+            btn.innerText = translations[currentLang].submit;
+          };
+        } catch (err) {
+          console.log(err);
+        }
+      };
+    </script>
+  </body>
+</html>
